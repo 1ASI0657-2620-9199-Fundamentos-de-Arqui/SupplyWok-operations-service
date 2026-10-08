@@ -26,7 +26,8 @@ public class SensorThresholdBreachedEventHandler {
                 event.sensorType(),
                 event.minValue(),
                 event.maxValue(),
-                event.recordedValue()
+                event.recordedValue(),
+                event.restaurantId()
         ));
     }
 }

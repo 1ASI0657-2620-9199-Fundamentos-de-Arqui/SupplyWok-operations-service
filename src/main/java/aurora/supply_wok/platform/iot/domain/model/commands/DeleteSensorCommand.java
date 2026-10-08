@@ -1,9 +1,7 @@
 package aurora.supply_wok.platform.iot.domain.model.commands;
 
-/**
- * Command to delete a sensor.
- *
- * @param sensorId the ID of the sensor to delete
- */
-public record DeleteSensorCommand(Long sensorId) {
+public record DeleteSensorCommand(Long restaurantId, Long sensorId) {
+    public DeleteSensorCommand(Long sensorId) {
+        this(null, sensorId);
+    }
 }

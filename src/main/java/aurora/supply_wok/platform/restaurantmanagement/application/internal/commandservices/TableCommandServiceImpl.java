@@ -7,6 +7,7 @@ import aurora.supply_wok.platform.restaurantmanagement.domain.model.commands.Upd
 import aurora.supply_wok.platform.restaurantmanagement.domain.model.commands.UpdateTableStatusCommand;
 import aurora.supply_wok.platform.restaurantmanagement.domain.model.services.TableCommandService;
 import aurora.supply_wok.platform.restaurantmanagement.infrastructure.persistence.jpa.repositories.RestaurantTableRepository;
+import aurora.supply_wok.platform.shared.domain.exceptions.ResourceNotFoundException;
 import aurora.supply_wok.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -34,9 +35,14 @@ public class TableCommandServiceImpl implements TableCommandService {
 
     @Override
     public Optional<RestaurantTable> handle(UpdateTableCommand command) {
-        var result = tableRepository.findById(command.tableId());
-        if (result.isEmpty())
-            throw new IllegalArgumentException("Table with id %d not found".formatted(command.tableId()));
+        var result = command.restaurantId() != null
+                ? tableRepository.findByIdAndRestaurantId(command.tableId(), command.restaurantId())
+                : tableRepository.findById(command.tableId());
+
+        if (result.isEmpty()) {
+            throw new ResourceNotFoundException("Table with id %d not found".formatted(command.tableId()));
+        }
+
         var table = result.get();
         table.update(command);
         tableRepository.save(table);
@@ -46,9 +52,14 @@ public class TableCommandServiceImpl implements TableCommandService {
 
     @Override
     public Optional<RestaurantTable> handle(UpdateTableStatusCommand command) {
-        var result = tableRepository.findById(command.tableId());
-        if (result.isEmpty())
-            throw new IllegalArgumentException("Table with id %d not found".formatted(command.tableId()));
+        var result = command.restaurantId() != null
+                ? tableRepository.findByIdAndRestaurantId(command.tableId(), command.restaurantId())
+                : tableRepository.findById(command.tableId());
+
+        if (result.isEmpty()) {
+            throw new ResourceNotFoundException("Table with id %d not found".formatted(command.tableId()));
+        }
+
         var table = result.get();
         table.updateStatus(command);
         tableRepository.save(table);
@@ -58,8 +69,14 @@ public class TableCommandServiceImpl implements TableCommandService {
 
     @Override
     public void handle(DeleteTableCommand command) {
-        if (!tableRepository.existsById(command.tableId()))
-            throw new IllegalArgumentException("Table with id %d not found".formatted(command.tableId()));
+        boolean exists = command.restaurantId() != null
+                ? tableRepository.existsByIdAndRestaurantId(command.tableId(), command.restaurantId())
+                : tableRepository.existsById(command.tableId());
+
+        if (!exists) {
+            throw new ResourceNotFoundException("Table with id %d not found".formatted(command.tableId()));
+        }
+
         tableRepository.deleteById(command.tableId());
     }
 }

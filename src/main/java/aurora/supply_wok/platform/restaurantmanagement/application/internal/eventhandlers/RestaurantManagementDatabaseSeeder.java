@@ -4,6 +4,7 @@ import aurora.supply_wok.platform.restaurantmanagement.domain.model.commands.Cre
 import aurora.supply_wok.platform.restaurantmanagement.domain.model.services.TableCommandService;
 import aurora.supply_wok.platform.restaurantmanagement.infrastructure.persistence.jpa.repositories.RestaurantTableRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,9 @@ import org.springframework.stereotype.Service;
 public class RestaurantManagementDatabaseSeeder {
     private final RestaurantTableRepository restaurantTableRepository;
     private final TableCommandService tableCommandService;
+
+    @Value("${supplywok.seed.restaurant-owner-id:1}")
+    private Long restaurantOwnerId;
 
     public RestaurantManagementDatabaseSeeder(
             RestaurantTableRepository restaurantTableRepository,
@@ -25,8 +29,8 @@ public class RestaurantManagementDatabaseSeeder {
     public void on(ApplicationReadyEvent event) {
         if (restaurantTableRepository.findAll().isEmpty()) {
             log.info("Seeding restaurant tables...");
-            tableCommandService.handle(new CreateTableCommand(1, 4));
-            tableCommandService.handle(new CreateTableCommand(2, 2));
+            tableCommandService.handle(new CreateTableCommand(restaurantOwnerId, 1, 4));
+            tableCommandService.handle(new CreateTableCommand(restaurantOwnerId, 2, 2));
             log.info("Restaurant tables seeded successfully.");
         }
     }

@@ -11,6 +11,8 @@ import aurora.supply_wok.platform.iot.interfaces.rest.resources.UpdateSensorReso
 import aurora.supply_wok.platform.iot.interfaces.rest.transform.CreateSensorCommandFromResourceAssembler;
 import aurora.supply_wok.platform.iot.interfaces.rest.transform.SensorResourceFromEntityAssembler;
 import aurora.supply_wok.platform.iot.interfaces.rest.transform.UpdateSensorCommandFromResourceAssembler;
+import aurora.supply_wok.platform.shared.domain.exceptions.ResourceNotFoundException;
+import aurora.supply_wok.platform.shared.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,6 +24,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -34,29 +37,23 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/api/v1/sensors", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Sensors", description = "Sensor management endpoints")
+@PreAuthorize("hasRole('RESTAURANT')")
 public class SensorsController {
 
     private final SensorCommandService sensorCommandService;
     private final SensorQueryService sensorQueryService;
+    private final CurrentUserProvider currentUserProvider;
 
-    /**
-     * Constructs the SensorsController.
-     *
-     * @param sensorCommandService the command service for sensors
-     * @param sensorQueryService   the query service for sensors
-     */
-    public SensorsController(SensorCommandService sensorCommandService, SensorQueryService sensorQueryService) {
+    public SensorsController(SensorCommandService sensorCommandService,
+                             SensorQueryService sensorQueryService,
+                             CurrentUserProvider currentUserProvider) {
         this.sensorCommandService = sensorCommandService;
         this.sensorQueryService = sensorQueryService;
+        this.currentUserProvider = currentUserProvider;
     }
 
-    /**
-     * Creates a new sensor.
-     *
-     * @param resource the create sensor request payload
-     * @return the created sensor response payload
-     */
     @PostMapping
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(
         summary = "Create a new sensor",
         description = "Creates a new sensor with specified attributes and validation."
@@ -71,10 +68,11 @@ public class SensorsController {
     })
     public ResponseEntity<SensorResource> createSensor(@Valid @RequestBody CreateSensorResource resource) {
         try {
-            var createSensorCommand = CreateSensorCommandFromResourceAssembler.toCommandFromResource(resource);
+            Long restaurantId = currentUserProvider.userId();
+            var createSensorCommand = CreateSensorCommandFromResourceAssembler.toCommandFromResource(restaurantId, resource);
             var sensorId = sensorCommandService.handle(createSensorCommand);
 
-            var getSensorByIdQuery = new GetSensorByIdQuery(sensorId);
+            var getSensorByIdQuery = new GetSensorByIdQuery(restaurantId, sensorId);
             var sensor = sensorQueryService.handle(getSensorByIdQuery);
 
             if (sensor.isEmpty()) {
@@ -88,13 +86,8 @@ public class SensorsController {
         }
     }
 
-    /**
-     * Retrieves a sensor by its identifier.
-     *
-     * @param sensorId the sensor unique identifier
-     * @return the sensor details if found, otherwise not found status
-     */
     @GetMapping("/{sensorId}")
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(
         summary = "Get sensor by ID",
         description = "Retrieves a specific sensor's information by unique identifier."
@@ -112,7 +105,8 @@ public class SensorsController {
             @Parameter(description = "Sensor unique identifier", example = "1", required = true)
             Long sensorId
     ) {
-        var getSensorByIdQuery = new GetSensorByIdQuery(sensorId);
+        Long restaurantId = currentUserProvider.userId();
+        var getSensorByIdQuery = new GetSensorByIdQuery(restaurantId, sensorId);
         var sensor = sensorQueryService.handle(getSensorByIdQuery);
 
         if (sensor.isEmpty()) {
@@ -123,12 +117,8 @@ public class SensorsController {
         return ResponseEntity.ok(sensorResource);
     }
 
-    /**
-     * Retrieves a list of all sensors in the system.
-     *
-     * @return a list of all sensors
-     */
     @GetMapping
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(
         summary = "Get all sensors",
         description = "Retrieves a list of all registered sensors."
@@ -141,7 +131,8 @@ public class SensorsController {
         )
     })
     public ResponseEntity<List<SensorResource>> getAllSensors() {
-        var sensors = sensorQueryService.handle(new GetAllSensorsQuery());
+        Long restaurantId = currentUserProvider.userId();
+        var sensors = sensorQueryService.handle(new GetAllSensorsQuery(restaurantId));
         if (sensors.isEmpty()) {
             return ResponseEntity.ok(Collections.emptyList());
         }
@@ -152,14 +143,8 @@ public class SensorsController {
         return ResponseEntity.ok(sensorResources);
     }
 
-    /**
-     * Updates an existing sensor.
-     *
-     * @param sensorId the sensor unique identifier
-     * @param resource the update sensor request payload
-     * @return the updated sensor details if found, otherwise appropriate error status
-     */
     @PutMapping("/{sensorId}")
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(
         summary = "Update sensor",
         description = "Updates an existing sensor's information by unique identifier."
@@ -179,14 +164,17 @@ public class SensorsController {
             Long sensorId,
             @Valid @RequestBody UpdateSensorResource resource
     ) {
+        Long restaurantId = currentUserProvider.userId();
         try {
-            var command = UpdateSensorCommandFromResourceAssembler.toCommandFromResource(sensorId, resource);
+            var command = UpdateSensorCommandFromResourceAssembler.toCommandFromResource(restaurantId, sensorId, resource);
             var sensor = sensorCommandService.handle(command);
             if (sensor.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
             var sensorResource = SensorResourceFromEntityAssembler.toResourceFromEntity(sensor.get());
             return ResponseEntity.ok(sensorResource);
+        } catch (ResourceNotFoundException ex) {
+            return ResponseEntity.notFound().build();
         } catch (IllegalArgumentException ex) {
             if (ex.getMessage().contains("does not exist")) {
                 return ResponseEntity.notFound().build();
@@ -195,13 +183,8 @@ public class SensorsController {
         }
     }
 
-    /**
-     * Deletes an existing sensor.
-     *
-     * @param sensorId the sensor unique identifier
-     * @return no content status if successful, otherwise not found status
-     */
     @DeleteMapping("/{sensorId}")
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(
         summary = "Delete sensor",
         description = "Deletes an existing sensor by unique identifier."
@@ -215,9 +198,12 @@ public class SensorsController {
             @Parameter(description = "Sensor unique identifier", example = "1", required = true)
             Long sensorId
     ) {
+        Long restaurantId = currentUserProvider.userId();
         try {
-            sensorCommandService.handle(new DeleteSensorCommand(sensorId));
+            sensorCommandService.handle(new DeleteSensorCommand(restaurantId, sensorId));
             return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException ex) {
+            return ResponseEntity.notFound().build();
         } catch (IllegalArgumentException ex) {
             if (ex.getMessage().contains("does not exist")) {
                 return ResponseEntity.notFound().build();

@@ -43,6 +43,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (token != null && tokenValidator.validateToken(token)) {
                 String email = tokenValidator.extractEmail(token);
                 List<String> roles = tokenValidator.extractRoles(token);
+                Long userId = tokenValidator.extractUserId(token).orElse(null);
+                var authenticatedUser = new AuthenticatedUser(userId, email, roles);
+
                 var authorities = roles.stream()
                         .map(role -> {
                             String roleName = role.startsWith("ROLE_") ? role : "ROLE_" + role;
@@ -50,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         })
                         .toList();
 
-                var authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);
+                var authentication = new UsernamePasswordAuthenticationToken(authenticatedUser, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {

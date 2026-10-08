@@ -22,6 +22,11 @@ public class Comanda extends AuditableAbstractAggregateRoot<Comanda> {
 
     @Getter
     @NotNull
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
+
+    @Getter
+    @NotNull
     @Column(name = "table_id", nullable = false)
     private Long tableId;
 
@@ -39,13 +44,19 @@ public class Comanda extends AuditableAbstractAggregateRoot<Comanda> {
         this.items = new ArrayList<>();
     }
 
-    public Comanda(Long tableId) {
+    public Comanda(Long restaurantId, Long tableId) {
+        this.restaurantId = restaurantId;
         this.tableId = tableId;
         this.status = EComandaStatus.OPEN;
         this.items = new ArrayList<>();
     }
 
+    public Comanda(Long tableId) {
+        this(1L, tableId);
+    }
+
     public Comanda(CreateComandaCommand command) {
+        this.restaurantId = command.restaurantId() != null ? command.restaurantId() : 1L;
         this.tableId = command.tableId();
         this.status = EComandaStatus.OPEN;
         this.items = new ArrayList<>();

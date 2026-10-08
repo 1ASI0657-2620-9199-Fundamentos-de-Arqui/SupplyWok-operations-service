@@ -7,6 +7,10 @@ public record SupplyMinimumStockReachedIntegrationEvent(
         Long supplyId,
         String name,
         int currentStock,
-        int minimumStockLevel
+        int minimumStockLevel,
+        Long restaurantId
 ) {
+    public SupplyMinimumStockReachedIntegrationEvent(Long supplyId, String name, int currentStock, int minimumStockLevel) {
+        this(supplyId, name, currentStock, minimumStockLevel, null);
+    }
 }

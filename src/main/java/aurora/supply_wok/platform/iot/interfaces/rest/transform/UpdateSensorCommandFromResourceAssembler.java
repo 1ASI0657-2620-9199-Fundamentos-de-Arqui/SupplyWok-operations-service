@@ -9,15 +9,11 @@ import aurora.supply_wok.platform.iot.interfaces.rest.resources.UpdateSensorReso
  */
 public class UpdateSensorCommandFromResourceAssembler {
 
-    /**
-     * Converts an UpdateSensorResource and a sensor ID to an UpdateSensorCommand.
-     *
-     * @param sensorId the ID of the sensor to update
-     * @param resource the {@link UpdateSensorResource} to convert
-     * @return the corresponding {@link UpdateSensorCommand}
-     * @throws IllegalArgumentException if the sensor type is invalid
-     */
     public static UpdateSensorCommand toCommandFromResource(Long sensorId, UpdateSensorResource resource) {
+        return toCommandFromResource(null, sensorId, resource);
+    }
+
+    public static UpdateSensorCommand toCommandFromResource(Long restaurantId, Long sensorId, UpdateSensorResource resource) {
         ESensorType sensorType;
         try {
             sensorType = ESensorType.valueOf(resource.type());
@@ -26,6 +22,7 @@ public class UpdateSensorCommandFromResourceAssembler {
         }
 
         return new UpdateSensorCommand(
+                restaurantId,
                 sensorId,
                 resource.name(),
                 resource.minValue(),

@@ -5,6 +5,7 @@ import aurora.supply_wok.platform.iot.domain.model.commands.CreateSensorCommand;
 import aurora.supply_wok.platform.iot.domain.model.valueobjects.ESensorType;
 import aurora.supply_wok.platform.iot.infrastructure.persistence.jpa.repositories.SensorPersistenceRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -15,6 +16,9 @@ import org.springframework.stereotype.Service;
 public class IotDatabaseSeeder {
     private final SensorPersistenceRepository sensorPersistenceRepository;
     private final SensorCommandService sensorCommandService;
+
+    @Value("${supplywok.seed.restaurant-owner-id:1}")
+    private Long restaurantOwnerId;
 
     public IotDatabaseSeeder(
             SensorPersistenceRepository sensorPersistenceRepository,
@@ -29,6 +33,7 @@ public class IotDatabaseSeeder {
         if (sensorPersistenceRepository.findAll().isEmpty()) {
             log.info("Seeding IoT sensors...");
             sensorCommandService.handle(new CreateSensorCommand(
+                    restaurantOwnerId,
                     "Sensor Temperatura Nevera 1",
                     1.0,
                     8.0,

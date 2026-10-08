@@ -14,6 +14,10 @@ import java.text.MessageFormat;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
+import aurora.supply_wok.platform.shared.domain.exceptions.ResourceNotFoundException;
+import aurora.supply_wok.platform.shared.domain.exceptions.UnauthorizedException;
+import org.springframework.security.access.AccessDeniedException;
+
 /**
  * Global exception handler for REST API.
  * Provides centralized exception handling for the entire application,
@@ -24,6 +28,45 @@ import java.util.ResourceBundle;
 @NullMarked
 public class GlobalExceptionHandler {
     private static final String MESSAGES_BASENAME = "messages";
+
+    /**
+     * Handles access denied exceptions when caller lacks required roles.
+     * Maps to HTTP 403 FORBIDDEN status.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDenied(AccessDeniedException ex) {
+        var applicationError = new ApplicationError(
+                "FORBIDDEN",
+                ex.getMessage() != null ? ex.getMessage() : "Access is denied"
+        );
+        return ErrorResponseAssembler.toErrorResponseFromApplicationError(applicationError);
+    }
+
+    /**
+     * Handles resource not found or unauthorized cross-tenant resource lookups.
+     * Maps to HTTP 404 NOT_FOUND status.
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<?> handleResourceNotFound(ResourceNotFoundException ex) {
+        var applicationError = ApplicationError.notFound(
+                "resource",
+                ex.getMessage() != null ? ex.getMessage() : "Requested resource not found"
+        );
+        return ErrorResponseAssembler.toErrorResponseFromApplicationError(applicationError);
+    }
+
+    /**
+     * Handles unauthorized requests when user principal is missing.
+     * Maps to HTTP 401 UNAUTHORIZED status.
+     */
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<?> handleUnauthorized(UnauthorizedException ex) {
+        var applicationError = new ApplicationError(
+                "UNAUTHORIZED",
+                ex.getMessage() != null ? ex.getMessage() : "User is not authorized"
+        );
+        return ErrorResponseAssembler.toErrorResponseFromApplicationError(applicationError);
+    }
 
     /**
      * Handles inventory service communication failures or timeouts.

@@ -26,7 +26,7 @@ public class InventoryStockEventHandler {
         try {
             var detail = "Supply %s reached minimum stock: %d/%d."
                     .formatted(event.name(), event.currentStock(), event.minimumStockLevel());
-            alertCommandService.handle(new CreateRestaurantAlertCommand(EAlertSeverity.HIGH, detail, null));
+            alertCommandService.handle(new CreateRestaurantAlertCommand(event.restaurantId(), EAlertSeverity.HIGH, detail, null));
         } catch (Exception ex) {
             log.error("Could not create low-stock alert for supply {}", event.supplyId(), ex);
         }

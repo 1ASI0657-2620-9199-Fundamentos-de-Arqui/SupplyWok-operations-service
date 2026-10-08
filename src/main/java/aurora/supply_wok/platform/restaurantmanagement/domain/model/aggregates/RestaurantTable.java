@@ -13,12 +13,19 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Entity
-@Table(name = "restaurant_tables")
+@Table(name = "restaurant_tables", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_table_restaurant_number", columnNames = {"restaurant_id", "table_number"})
+})
 public class RestaurantTable extends AuditableAbstractAggregateRoot<RestaurantTable> {
 
     @Getter
     @NotNull
-    @Column(name = "table_number", nullable = false, unique = true)
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
+
+    @Getter
+    @NotNull
+    @Column(name = "table_number", nullable = false)
     private int number;
 
     @Getter
@@ -35,13 +42,19 @@ public class RestaurantTable extends AuditableAbstractAggregateRoot<RestaurantTa
     public RestaurantTable() {
     }
 
-    public RestaurantTable(int number, int capacity) {
+    public RestaurantTable(Long restaurantId, int number, int capacity) {
+        this.restaurantId = restaurantId;
         this.number = number;
         this.capacity = capacity;
         this.status = ETableStatus.AVAILABLE;
     }
 
+    public RestaurantTable(int number, int capacity) {
+        this(1L, number, capacity);
+    }
+
     public RestaurantTable(CreateTableCommand command) {
+        this.restaurantId = command.restaurantId() != null ? command.restaurantId() : 1L;
         this.number = command.number();
         this.capacity = command.capacity();
         this.status = ETableStatus.AVAILABLE;

@@ -22,6 +22,11 @@ public class Sensor extends AuditableAbstractAggregateRoot<Sensor> {
 
     @Getter
     @NotNull
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
+
+    @Getter
+    @NotNull
     @NotBlank
     @Column(name = "name", length = 50, nullable = false)
     private String name;
@@ -58,16 +63,10 @@ public class Sensor extends AuditableAbstractAggregateRoot<Sensor> {
     }
 
     /**
-     * Full constructor for creating a Sensor.
-     *
-     * @param name      the name of the sensor
-     * @param minValue  the minimum value the sensor can record
-     * @param maxValue  the maximum value the sensor can record
-     * @param enabled   whether the sensor is active
-     * @param lastValue the last recorded value
-     * @param type      the sensor type
+     * Full constructor for creating a Sensor with restaurantId.
      */
-    public Sensor(String name, double minValue, double maxValue, boolean enabled, double lastValue, ESensorType type) {
+    public Sensor(Long restaurantId, String name, double minValue, double maxValue, boolean enabled, double lastValue, ESensorType type) {
+        this.restaurantId = restaurantId;
         this.name = name;
         this.minValue = minValue;
         this.maxValue = maxValue;
@@ -76,12 +75,15 @@ public class Sensor extends AuditableAbstractAggregateRoot<Sensor> {
         this.type = type;
     }
 
+    public Sensor(String name, double minValue, double maxValue, boolean enabled, double lastValue, ESensorType type) {
+        this(1L, name, minValue, maxValue, enabled, lastValue, type);
+    }
+
     /**
      * Constructs a Sensor from a CreateSensorCommand.
-     *
-     * @param command the command containing initialization data
      */
     public Sensor(CreateSensorCommand command) {
+        this.restaurantId = command.restaurantId() != null ? command.restaurantId() : 1L;
         this.name = command.name();
         this.minValue = command.minValue();
         this.maxValue = command.maxValue();
@@ -92,9 +94,6 @@ public class Sensor extends AuditableAbstractAggregateRoot<Sensor> {
 
     /**
      * Updates the sensor attributes based on an UpdateSensorCommand.
-     *
-     * @param command the command containing update data
-     * @return the updated Sensor instance
      */
     public Sensor updateSensor(UpdateSensorCommand command) {
         this.name = command.name();

@@ -52,4 +52,15 @@ public class IotContextFacade {
         var query = new GetSensorByIdQuery(sensorId);
         return sensorQueryService.handle(query).map(sensor -> sensor.getLastValue());
     }
+
+    public String fetchSensorNameByIdAndRestaurantId(Long sensorId, Long restaurantId) {
+        var query = new GetSensorByIdQuery(restaurantId, sensorId);
+        var sensor = sensorQueryService.handle(query);
+        return sensor.map(s -> s.getName()).orElse("");
+    }
+
+    public Optional<Double> fetchSensorLastValueByIdAndRestaurantId(Long sensorId, Long restaurantId) {
+        var query = new GetSensorByIdQuery(restaurantId, sensorId);
+        return sensorQueryService.handle(query).map(sensor -> sensor.getLastValue());
+    }
 }

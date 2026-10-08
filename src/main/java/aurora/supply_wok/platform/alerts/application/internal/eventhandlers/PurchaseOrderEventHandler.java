@@ -28,7 +28,7 @@ public class PurchaseOrderEventHandler {
         try {
             var severity = "High".equalsIgnoreCase(event.priority()) ? EAlertSeverity.HIGH : EAlertSeverity.MEDIUM;
             var detail = "New purchase order %s from %s.".formatted(event.code(), event.restaurantName());
-            alertCommandService.handle(new CreateSupplierAlertCommand(severity, detail));
+            alertCommandService.handle(new CreateSupplierAlertCommand(event.supplierEmail(), severity, detail));
         } catch (Exception ex) {
             log.warn("Could not create supplier alert for purchase order {}: {}", event.purchaseOrderId(), ex.getMessage());
         }
@@ -39,13 +39,13 @@ public class PurchaseOrderEventHandler {
         try {
             if ("Delayed".equals(event.currentStatus())) {
                 var detail = "Purchase order %s from supplier %s is delayed.".formatted(event.code(), event.supplierName());
-                alertCommandService.handle(new CreateRestaurantAlertCommand(EAlertSeverity.HIGH, detail, null));
+                alertCommandService.handle(new CreateRestaurantAlertCommand(event.restaurantId(), EAlertSeverity.HIGH, detail, null));
                 return;
             }
 
             if ("Delivered".equals(event.currentStatus())) {
                 var detail = "Purchase order %s from supplier %s was delivered.".formatted(event.code(), event.supplierName());
-                alertCommandService.handle(new CreateRestaurantAlertCommand(EAlertSeverity.LOW, detail, null));
+                alertCommandService.handle(new CreateRestaurantAlertCommand(event.restaurantId(), EAlertSeverity.LOW, detail, null));
             }
         } catch (Exception ex) {
             log.warn("Could not create restaurant alert for purchase order {}: {}", event.purchaseOrderId(), ex.getMessage());

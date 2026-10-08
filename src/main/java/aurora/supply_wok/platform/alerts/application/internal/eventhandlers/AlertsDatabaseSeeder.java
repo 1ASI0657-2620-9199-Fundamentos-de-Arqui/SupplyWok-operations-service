@@ -5,6 +5,7 @@ import aurora.supply_wok.platform.alerts.domain.model.commands.CreateRestaurantA
 import aurora.supply_wok.platform.alerts.domain.model.valueobjects.EAlertSeverity;
 import aurora.supply_wok.platform.alerts.infrastructure.persistence.jpa.repositories.AlertPersistenceRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -15,6 +16,9 @@ import org.springframework.stereotype.Service;
 public class AlertsDatabaseSeeder {
     private final AlertPersistenceRepository alertPersistenceRepository;
     private final AlertCommandService alertCommandService;
+
+    @Value("${supplywok.seed.restaurant-owner-id:1}")
+    private Long restaurantOwnerId;
 
     public AlertsDatabaseSeeder(
             AlertPersistenceRepository alertPersistenceRepository,
@@ -29,6 +33,7 @@ public class AlertsDatabaseSeeder {
         if (alertPersistenceRepository.findAll().isEmpty()) {
             log.info("Seeding alerts...");
             alertCommandService.handle(new CreateRestaurantAlertCommand(
+                    restaurantOwnerId,
                     EAlertSeverity.CRITICAL,
                     "Temperatura alta detectada en refrigerador de verduras",
                     1L

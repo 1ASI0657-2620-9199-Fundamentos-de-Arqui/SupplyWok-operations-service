@@ -24,16 +24,30 @@ public class AlertQueryServiceImpl implements AlertQueryService {
 
     @Override
     public Optional<Alert> handle(GetAlertByIdQuery query) {
+        if (query.restaurantId() != null) {
+            return alertPersistenceRepository.findRestaurantAlertByIdAndRestaurantId(query.alertId(), query.restaurantId())
+                    .map(a -> (Alert) a);
+        }
+        if (query.supplierEmail() != null) {
+            return alertPersistenceRepository.findSupplierAlertByIdAndSupplierEmail(query.alertId(), query.supplierEmail())
+                    .map(a -> (Alert) a);
+        }
         return alertPersistenceRepository.findById(query.alertId());
     }
 
     @Override
     public List<SupplierAlert> handle(GetAllSupplierAlertsQuery query) {
+        if (query.supplierEmail() != null) {
+            return alertPersistenceRepository.findAllSupplierAlertsBySupplierEmail(query.supplierEmail());
+        }
         return alertPersistenceRepository.findAllSupplierAlerts();
     }
 
     @Override
     public List<RestaurantAlert> handle(GetAllRestaurantAlertsQuery query) {
+        if (query.restaurantId() != null) {
+            return alertPersistenceRepository.findAllRestaurantAlertsByRestaurantId(query.restaurantId());
+        }
         return alertPersistenceRepository.findAllRestaurantAlerts();
     }
 }

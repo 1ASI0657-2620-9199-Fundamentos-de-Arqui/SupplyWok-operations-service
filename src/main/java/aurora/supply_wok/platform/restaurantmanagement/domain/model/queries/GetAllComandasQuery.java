@@ -1,4 +1,7 @@
 package aurora.supply_wok.platform.restaurantmanagement.domain.model.queries;
 
-public record GetAllComandasQuery() {
+public record GetAllComandasQuery(Long restaurantId) {
+    public GetAllComandasQuery() {
+        this(null);
+    }
 }

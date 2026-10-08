@@ -26,7 +26,7 @@ public class SensorThresholdEventHandler {
         try {
             var detail = "%s sensor %s recorded %.2f outside safe range %.2f - %.2f."
                     .formatted(event.sensorType(), event.sensorName(), event.recordedValue(), event.minValue(), event.maxValue());
-            alertCommandService.handle(new CreateRestaurantAlertCommand(EAlertSeverity.CRITICAL, detail, event.sensorId()));
+            alertCommandService.handle(new CreateRestaurantAlertCommand(event.restaurantId(), EAlertSeverity.CRITICAL, detail, event.sensorId()));
         } catch (Exception ex) {
             log.warn("Could not create threshold alert for sensor {}: {}", event.sensorId(), ex.getMessage());
         }

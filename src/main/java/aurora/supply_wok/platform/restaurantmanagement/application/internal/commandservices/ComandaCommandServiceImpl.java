@@ -7,6 +7,8 @@ import aurora.supply_wok.platform.restaurantmanagement.domain.model.commands.Del
 import aurora.supply_wok.platform.restaurantmanagement.domain.model.commands.UpdateComandaStatusCommand;
 import aurora.supply_wok.platform.restaurantmanagement.domain.model.services.ComandaCommandService;
 import aurora.supply_wok.platform.restaurantmanagement.infrastructure.persistence.jpa.repositories.ComandaRepository;
+import aurora.supply_wok.platform.restaurantmanagement.infrastructure.persistence.jpa.repositories.RestaurantTableRepository;
+import aurora.supply_wok.platform.shared.domain.exceptions.ResourceNotFoundException;
 import aurora.supply_wok.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -16,15 +18,26 @@ import java.util.Optional;
 public class ComandaCommandServiceImpl implements ComandaCommandService {
 
     private final ComandaRepository comandaRepository;
+    private final RestaurantTableRepository tableRepository;
     private final DomainEventPublisher domainEventPublisher;
 
-    public ComandaCommandServiceImpl(ComandaRepository comandaRepository, DomainEventPublisher domainEventPublisher) {
+    public ComandaCommandServiceImpl(ComandaRepository comandaRepository,
+                                     RestaurantTableRepository tableRepository,
+                                     DomainEventPublisher domainEventPublisher) {
         this.comandaRepository = comandaRepository;
+        this.tableRepository = tableRepository;
         this.domainEventPublisher = domainEventPublisher;
     }
 
     @Override
     public Long handle(CreateComandaCommand command) {
+        if (tableRepository != null && command.restaurantId() != null) {
+            var table = tableRepository.findByIdAndRestaurantId(command.tableId(), command.restaurantId());
+            if (table.isEmpty()) {
+                throw new ResourceNotFoundException("Table with id %d not found".formatted(command.tableId()));
+            }
+        }
+
         var comanda = new Comanda(command);
         comandaRepository.save(comanda);
         comanda.onCreated();
@@ -34,9 +47,14 @@ public class ComandaCommandServiceImpl implements ComandaCommandService {
 
     @Override
     public Optional<Comanda> handle(UpdateComandaStatusCommand command) {
-        var result = comandaRepository.findById(command.comandaId());
-        if (result.isEmpty())
-            throw new IllegalArgumentException("Comanda with id %d not found".formatted(command.comandaId()));
+        var result = command.restaurantId() != null
+                ? comandaRepository.findByIdAndRestaurantId(command.comandaId(), command.restaurantId())
+                : comandaRepository.findById(command.comandaId());
+
+        if (result.isEmpty()) {
+            throw new ResourceNotFoundException("Comanda with id %d not found".formatted(command.comandaId()));
+        }
+
         var comanda = result.get();
         comanda.updateStatus(command);
         comandaRepository.save(comanda);
@@ -46,9 +64,14 @@ public class ComandaCommandServiceImpl implements ComandaCommandService {
 
     @Override
     public Optional<Comanda> handle(AddComandaItemCommand command) {
-        var result = comandaRepository.findById(command.comandaId());
-        if (result.isEmpty())
-            throw new IllegalArgumentException("Comanda with id %d not found".formatted(command.comandaId()));
+        var result = command.restaurantId() != null
+                ? comandaRepository.findByIdAndRestaurantId(command.comandaId(), command.restaurantId())
+                : comandaRepository.findById(command.comandaId());
+
+        if (result.isEmpty()) {
+            throw new ResourceNotFoundException("Comanda with id %d not found".formatted(command.comandaId()));
+        }
+
         var comanda = result.get();
         comanda.addItem(command);
         comandaRepository.save(comanda);
@@ -58,8 +81,14 @@ public class ComandaCommandServiceImpl implements ComandaCommandService {
 
     @Override
     public void handle(DeleteComandaCommand command) {
-        if (!comandaRepository.existsById(command.comandaId()))
-            throw new IllegalArgumentException("Comanda with id %d not found".formatted(command.comandaId()));
+        boolean exists = command.restaurantId() != null
+                ? comandaRepository.existsByIdAndRestaurantId(command.comandaId(), command.restaurantId())
+                : comandaRepository.existsById(command.comandaId());
+
+        if (!exists) {
+            throw new ResourceNotFoundException("Comanda with id %d not found".formatted(command.comandaId()));
+        }
+
         comandaRepository.deleteById(command.comandaId());
     }
 }

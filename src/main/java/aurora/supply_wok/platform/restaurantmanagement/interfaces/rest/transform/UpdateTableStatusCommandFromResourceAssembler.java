@@ -7,12 +7,10 @@ import aurora.supply_wok.platform.restaurantmanagement.interfaces.rest.resources
 public class UpdateTableStatusCommandFromResourceAssembler {
 
     public static UpdateTableStatusCommand toCommandFromResource(Long tableId, UpdateTableStatusResource resource) {
-        ETableStatus status;
-        try {
-            status = ETableStatus.valueOf(resource.status());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid table status: " + resource.status());
-        }
-        return new UpdateTableStatusCommand(tableId, status);
+        return new UpdateTableStatusCommand(null, tableId, ETableStatus.valueOf(resource.status()));
+    }
+
+    public static UpdateTableStatusCommand toCommandFromResource(Long restaurantId, Long tableId, UpdateTableStatusResource resource) {
+        return new UpdateTableStatusCommand(restaurantId, tableId, ETableStatus.valueOf(resource.status()));
     }
 }

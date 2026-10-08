@@ -9,14 +9,11 @@ import aurora.supply_wok.platform.iot.interfaces.rest.resources.CreateSensorReso
  */
 public class CreateSensorCommandFromResourceAssembler {
 
-    /**
-     * Converts a CreateSensorResource to a CreateSensorCommand.
-     *
-     * @param resource the {@link CreateSensorResource} to convert
-     * @return the corresponding {@link CreateSensorCommand}
-     * @throws IllegalArgumentException if the sensor type is invalid
-     */
     public static CreateSensorCommand toCommandFromResource(CreateSensorResource resource) {
+        return toCommandFromResource(1L, resource);
+    }
+
+    public static CreateSensorCommand toCommandFromResource(Long restaurantId, CreateSensorResource resource) {
         ESensorType sensorType;
         try {
             sensorType = ESensorType.valueOf(resource.type());
@@ -25,6 +22,7 @@ public class CreateSensorCommandFromResourceAssembler {
         }
 
         return new CreateSensorCommand(
+                restaurantId,
                 resource.name(),
                 resource.minValue(),
                 resource.maxValue(),

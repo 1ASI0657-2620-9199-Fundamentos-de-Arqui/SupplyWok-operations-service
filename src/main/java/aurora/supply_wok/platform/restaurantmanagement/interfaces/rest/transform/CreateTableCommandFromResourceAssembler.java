@@ -6,6 +6,10 @@ import aurora.supply_wok.platform.restaurantmanagement.interfaces.rest.resources
 public class CreateTableCommandFromResourceAssembler {
 
     public static CreateTableCommand toCommandFromResource(CreateTableResource resource) {
-        return new CreateTableCommand(resource.number(), resource.capacity());
+        return new CreateTableCommand(1L, resource.number(), resource.capacity());
+    }
+
+    public static CreateTableCommand toCommandFromResource(Long restaurantId, CreateTableResource resource) {
+        return new CreateTableCommand(restaurantId, resource.number(), resource.capacity());
     }
 }

@@ -8,8 +8,20 @@ public record SensorThresholdBreachedEvent(
         String sensorType,
         double minValue,
         double maxValue,
-        double recordedValue
+        double recordedValue,
+        Long restaurantId
 ) {
+    public SensorThresholdBreachedEvent(
+            Long sensorId,
+            String sensorName,
+            String sensorType,
+            double minValue,
+            double maxValue,
+            double recordedValue
+    ) {
+        this(sensorId, sensorName, sensorType, minValue, maxValue, recordedValue, null);
+    }
+
     public static SensorThresholdBreachedEvent from(Sensor sensor) {
         return new SensorThresholdBreachedEvent(
                 sensor.getId(),
@@ -17,7 +29,8 @@ public record SensorThresholdBreachedEvent(
                 sensor.getType().name(),
                 sensor.getMinValue(),
                 sensor.getMaxValue(),
-                sensor.getLastValue()
+                sensor.getLastValue(),
+                sensor.getRestaurantId()
         );
     }
 }

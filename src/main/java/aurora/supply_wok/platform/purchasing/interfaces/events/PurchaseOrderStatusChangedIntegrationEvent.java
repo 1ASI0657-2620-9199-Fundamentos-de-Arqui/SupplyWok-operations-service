@@ -10,6 +10,19 @@ public record PurchaseOrderStatusChangedIntegrationEvent(
         String supplierName,
         String restaurantName,
         String previousStatus,
-        String currentStatus
+        String currentStatus,
+        Long restaurantId,
+        String supplierEmail
 ) {
+    public PurchaseOrderStatusChangedIntegrationEvent(
+            Long purchaseOrderId,
+            String code,
+            Long supplierId,
+            String supplierName,
+            String restaurantName,
+            String previousStatus,
+            String currentStatus
+    ) {
+        this(purchaseOrderId, code, supplierId, supplierName, restaurantName, previousStatus, currentStatus, null, null);
+    }
 }

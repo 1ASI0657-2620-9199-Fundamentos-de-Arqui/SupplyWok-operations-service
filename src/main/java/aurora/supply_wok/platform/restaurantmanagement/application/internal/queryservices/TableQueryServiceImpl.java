@@ -21,11 +21,17 @@ public class TableQueryServiceImpl implements TableQueryService {
 
     @Override
     public List<RestaurantTable> handle(GetAllTablesQuery query) {
+        if (query.restaurantId() != null) {
+            return tableRepository.findAllByRestaurantId(query.restaurantId());
+        }
         return tableRepository.findAll();
     }
 
     @Override
     public Optional<RestaurantTable> handle(GetTableByIdQuery query) {
+        if (query.restaurantId() != null) {
+            return tableRepository.findByIdAndRestaurantId(query.tableId(), query.restaurantId());
+        }
         return tableRepository.findById(query.tableId());
     }
 }

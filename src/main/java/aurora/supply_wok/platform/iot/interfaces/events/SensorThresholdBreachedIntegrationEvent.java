@@ -9,6 +9,17 @@ public record SensorThresholdBreachedIntegrationEvent(
         String sensorType,
         double minValue,
         double maxValue,
-        double recordedValue
+        double recordedValue,
+        Long restaurantId
 ) {
+    public SensorThresholdBreachedIntegrationEvent(
+            Long sensorId,
+            String sensorName,
+            String sensorType,
+            double minValue,
+            double maxValue,
+            double recordedValue
+    ) {
+        this(sensorId, sensorName, sensorType, minValue, maxValue, recordedValue, null);
+    }
 }

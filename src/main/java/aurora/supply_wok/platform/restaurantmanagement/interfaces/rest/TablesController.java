@@ -13,6 +13,7 @@ import aurora.supply_wok.platform.restaurantmanagement.interfaces.rest.transform
 import aurora.supply_wok.platform.restaurantmanagement.interfaces.rest.transform.TableResourceFromEntityAssembler;
 import aurora.supply_wok.platform.restaurantmanagement.interfaces.rest.transform.UpdateTableCommandFromResourceAssembler;
 import aurora.supply_wok.platform.restaurantmanagement.interfaces.rest.transform.UpdateTableStatusCommandFromResourceAssembler;
+import aurora.supply_wok.platform.shared.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -24,6 +25,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -33,17 +35,23 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/api/v1/tables", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Tables", description = "Restaurant table management endpoints")
+@PreAuthorize("hasRole('RESTAURANT')")
 public class TablesController {
 
     private final TableCommandService tableCommandService;
     private final TableQueryService tableQueryService;
+    private final CurrentUserProvider currentUserProvider;
 
-    public TablesController(TableCommandService tableCommandService, TableQueryService tableQueryService) {
+    public TablesController(TableCommandService tableCommandService,
+                            TableQueryService tableQueryService,
+                            CurrentUserProvider currentUserProvider) {
         this.tableCommandService = tableCommandService;
         this.tableQueryService = tableQueryService;
+        this.currentUserProvider = currentUserProvider;
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(summary = "Create a new table", description = "Creates a new restaurant table.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Table created successfully",
@@ -51,10 +59,11 @@ public class TablesController {
             @ApiResponse(responseCode = "400", description = "Invalid input data")
     })
     public ResponseEntity<TableResource> createTable(@Valid @RequestBody CreateTableResource resource) {
-        var command = CreateTableCommandFromResourceAssembler.toCommandFromResource(resource);
+        Long restaurantId = currentUserProvider.userId();
+        var command = CreateTableCommandFromResourceAssembler.toCommandFromResource(restaurantId, resource);
         var tableId = tableCommandService.handle(command);
 
-        var table = tableQueryService.handle(new GetTableByIdQuery(tableId));
+        var table = tableQueryService.handle(new GetTableByIdQuery(restaurantId, tableId));
         if (table.isEmpty()) return ResponseEntity.badRequest().build();
 
         var tableResource = TableResourceFromEntityAssembler.toResourceFromEntity(table.get());
@@ -62,6 +71,7 @@ public class TablesController {
     }
 
     @GetMapping("/{tableId}")
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(summary = "Get table by ID", description = "Retrieves a specific table by its unique identifier.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Table found",
@@ -70,7 +80,8 @@ public class TablesController {
     })
     public ResponseEntity<TableResource> getTableById(
             @PathVariable @Parameter(description = "Table unique identifier", example = "1", required = true) Long tableId) {
-        var table = tableQueryService.handle(new GetTableByIdQuery(tableId));
+        Long restaurantId = currentUserProvider.userId();
+        var table = tableQueryService.handle(new GetTableByIdQuery(restaurantId, tableId));
         if (table.isEmpty()) return ResponseEntity.notFound().build();
 
         var tableResource = TableResourceFromEntityAssembler.toResourceFromEntity(table.get());
@@ -78,13 +89,15 @@ public class TablesController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(summary = "Get all tables", description = "Retrieves a list of all restaurant tables.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Tables list retrieved",
                     content = @Content(schema = @Schema(implementation = TableResource.class)))
     })
     public ResponseEntity<List<TableResource>> getAllTables() {
-        var tables = tableQueryService.handle(new GetAllTablesQuery());
+        Long restaurantId = currentUserProvider.userId();
+        var tables = tableQueryService.handle(new GetAllTablesQuery(restaurantId));
         if (tables.isEmpty()) return ResponseEntity.ok(Collections.emptyList());
 
         var tableResources = tables.stream()
@@ -94,6 +107,7 @@ public class TablesController {
     }
 
     @PutMapping("/{tableId}")
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(summary = "Update table details", description = "Updates the number and capacity of a restaurant table.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Table updated successfully",
@@ -103,7 +117,8 @@ public class TablesController {
     public ResponseEntity<TableResource> updateTable(
             @PathVariable @Parameter(description = "Table unique identifier", example = "1", required = true) Long tableId,
             @Valid @RequestBody UpdateTableResource resource) {
-        var command = UpdateTableCommandFromResourceAssembler.toCommandFromResource(tableId, resource);
+        Long restaurantId = currentUserProvider.userId();
+        var command = UpdateTableCommandFromResourceAssembler.toCommandFromResource(restaurantId, tableId, resource);
         var table = tableCommandService.handle(command);
         if (table.isEmpty()) return ResponseEntity.notFound().build();
 
@@ -112,6 +127,7 @@ public class TablesController {
     }
 
     @PutMapping("/{tableId}/status")
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(summary = "Update table status", description = "Updates the status of a restaurant table.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Table status updated",
@@ -121,7 +137,8 @@ public class TablesController {
     public ResponseEntity<TableResource> updateTableStatus(
             @PathVariable @Parameter(description = "Table unique identifier", example = "1", required = true) Long tableId,
             @Valid @RequestBody UpdateTableStatusResource resource) {
-        var command = UpdateTableStatusCommandFromResourceAssembler.toCommandFromResource(tableId, resource);
+        Long restaurantId = currentUserProvider.userId();
+        var command = UpdateTableStatusCommandFromResourceAssembler.toCommandFromResource(restaurantId, tableId, resource);
         var table = tableCommandService.handle(command);
         if (table.isEmpty()) return ResponseEntity.notFound().build();
 
@@ -130,6 +147,7 @@ public class TablesController {
     }
 
     @DeleteMapping("/{tableId}")
+    @PreAuthorize("hasRole('RESTAURANT')")
     @Operation(summary = "Delete a table", description = "Deletes a restaurant table by its unique identifier.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Table deleted successfully"),
@@ -137,7 +155,8 @@ public class TablesController {
     })
     public ResponseEntity<Void> deleteTable(
             @PathVariable @Parameter(description = "Table unique identifier", example = "1", required = true) Long tableId) {
-        tableCommandService.handle(new DeleteTableCommand(tableId));
+        Long restaurantId = currentUserProvider.userId();
+        tableCommandService.handle(new DeleteTableCommand(restaurantId, tableId));
         return ResponseEntity.ok().build();
     }
 }

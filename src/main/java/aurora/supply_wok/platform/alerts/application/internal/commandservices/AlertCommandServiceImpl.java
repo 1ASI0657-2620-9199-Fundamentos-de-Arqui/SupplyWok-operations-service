@@ -12,6 +12,7 @@ import aurora.supply_wok.platform.alerts.domain.model.valueobjects.EAlertSeverit
 import aurora.supply_wok.platform.alerts.infrastructure.clients.InventoryServiceClient;
 import aurora.supply_wok.platform.alerts.infrastructure.persistence.jpa.repositories.AlertPersistenceRepository;
 import aurora.supply_wok.platform.iot.interfaces.acl.IotContextFacade;
+import aurora.supply_wok.platform.shared.domain.exceptions.ResourceNotFoundException;
 import aurora.supply_wok.platform.shared.infrastructure.events.DomainEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -50,13 +51,17 @@ public class AlertCommandServiceImpl implements AlertCommandService {
 
     @Override
     public Long handle(CreateRestaurantAlertCommand command) {
-        var sensorName = command.sensorId() == null ? "System" : iotContextFacade.fetchSensorNameById(command.sensorId());
+        var sensorName = command.sensorId() == null ? "System"
+                : (command.restaurantId() != null
+                    ? iotContextFacade.fetchSensorNameByIdAndRestaurantId(command.sensorId(), command.restaurantId())
+                    : iotContextFacade.fetchSensorNameById(command.sensorId()));
+
         if (command.sensorId() != null && sensorName.isBlank()) {
-            throw new IllegalArgumentException("Sensor with ID " + command.sensorId() + " does not exist.");
+            throw new ResourceNotFoundException("Sensor with ID " + command.sensorId() + " does not exist.");
         }
 
         var sensorId = command.sensorId() == null ? 0L : command.sensorId();
-        var restaurantAlert = new RestaurantAlert(command.severity(), command.detail(), sensorId, sensorName);
+        var restaurantAlert = new RestaurantAlert(command.restaurantId(), command.severity(), command.detail(), sensorId, sensorName);
         try {
             alertPersistenceRepository.save(restaurantAlert);
             restaurantAlert.onCreated();
@@ -69,17 +74,26 @@ public class AlertCommandServiceImpl implements AlertCommandService {
 
     @Override
     public Optional<Alert> handle(CreateAlertRestaurantFromInventoryCommand command) {
-        var sensorLastValue = iotContextFacade.fetchSensorLastValueById(command.sensorId())
-                .orElseThrow(() -> new IllegalArgumentException("Sensor with ID " + command.sensorId() + " does not exist."));
-        var sensorName = iotContextFacade.fetchSensorNameById(command.sensorId());
+        var sensorLastValue = command.restaurantId() != null
+                ? iotContextFacade.fetchSensorLastValueByIdAndRestaurantId(command.sensorId(), command.restaurantId())
+                : iotContextFacade.fetchSensorLastValueById(command.sensorId());
+
+        if (sensorLastValue.isEmpty()) {
+            throw new ResourceNotFoundException("Sensor with ID " + command.sensorId() + " does not exist.");
+        }
+
+        var sensorName = command.restaurantId() != null
+                ? iotContextFacade.fetchSensorNameByIdAndRestaurantId(command.sensorId(), command.restaurantId())
+                : iotContextFacade.fetchSensorNameById(command.sensorId());
+
         var inventoryStock = inventoryServiceClient.getTotalSupplyStock();
 
-        if (Math.abs(inventoryStock - sensorLastValue) < 0.000001d) {
+        if (Math.abs(inventoryStock - sensorLastValue.get()) < 0.000001d) {
             return Optional.empty();
         }
 
-        var detail = "Inventory stock (" + inventoryStock + ") differs from sensor last value (" + sensorLastValue + ").";
-        var restaurantAlert = new RestaurantAlert(EAlertSeverity.MEDIUM, detail, command.sensorId(), sensorName);
+        var detail = "Inventory stock (" + inventoryStock + ") differs from sensor last value (" + sensorLastValue.get() + ").";
+        var restaurantAlert = new RestaurantAlert(command.restaurantId(), EAlertSeverity.MEDIUM, detail, command.sensorId(), sensorName);
         try {
             alertPersistenceRepository.save(restaurantAlert);
             restaurantAlert.onCreated();
@@ -92,18 +106,27 @@ public class AlertCommandServiceImpl implements AlertCommandService {
 
     @Override
     public Optional<Alert> handle(AcknowledgeAlertCommand command) {
-        var alert = alertPersistenceRepository.findById(command.alertId());
+        Optional<? extends Alert> alert;
+        if (command.restaurantId() != null) {
+            alert = alertPersistenceRepository.findRestaurantAlertByIdAndRestaurantId(command.alertId(), command.restaurantId());
+        } else if (command.supplierEmail() != null) {
+            alert = alertPersistenceRepository.findSupplierAlertByIdAndSupplierEmail(command.alertId(), command.supplierEmail());
+        } else {
+            alert = alertPersistenceRepository.findById(command.alertId());
+        }
+
         if (alert.isEmpty()) {
             return Optional.empty();
         }
 
-        alert.get().acknowledge();
+        var entity = alert.get();
+        entity.acknowledge();
         try {
-            alertPersistenceRepository.save(alert.get());
-            domainEventPublisher.publishAndClear(alert.get());
+            alertPersistenceRepository.save(entity);
+            domainEventPublisher.publishAndClear(entity);
         } catch (Exception e) {
             throw new IllegalArgumentException("Error while acknowledging alert: " + e.getMessage());
         }
-        return alert;
+        return Optional.of(entity);
     }
 }

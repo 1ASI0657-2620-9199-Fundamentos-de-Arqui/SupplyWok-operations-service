@@ -10,6 +10,19 @@ public record PurchaseOrderCreatedIntegrationEvent(
         String supplierName,
         String restaurantName,
         String priority,
-        String status
+        String status,
+        Long restaurantId,
+        String supplierEmail
 ) {
+    public PurchaseOrderCreatedIntegrationEvent(
+            Long purchaseOrderId,
+            String code,
+            Long supplierId,
+            String supplierName,
+            String restaurantName,
+            String priority,
+            String status
+    ) {
+        this(purchaseOrderId, code, supplierId, supplierName, restaurantName, priority, status, null, null);
+    }
 }
