@@ -31,7 +31,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 import java.util.List;
 
-@CrossOrigin(origins = "*", methods = { RequestMethod.POST, RequestMethod.GET, RequestMethod.PUT, RequestMethod.DELETE })
 @RestController
 @RequestMapping(value = "/api/v1/tables", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Tables", description = "Restaurant table management endpoints")
